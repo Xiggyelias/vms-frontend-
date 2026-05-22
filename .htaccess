@@ -1,0 +1,11 @@
+# Prevent viewing of the .env file
+<FilesMatch "^\.env">
+    Require all denied
+</FilesMatch>
+
+# Protect other hidden attributes
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+Options -Indexes
