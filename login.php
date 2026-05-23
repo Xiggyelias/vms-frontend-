@@ -21,6 +21,18 @@ if (isset($_GET['error'])) {
     } elseif ($error === 'not_found') {
         $alert_type = 'warning';
         $alert_message = 'Account not found.';
+    } elseif ($error === 'google_failed') {
+        $alert_type = 'danger';
+        $alert_message = 'Google sign-in failed. Please try again.';
+    } elseif ($error === 'domain_not_allowed') {
+        $alert_type = 'danger';
+        $alert_message = 'Only Africa University email addresses are allowed.';
+    } elseif ($error === 'invalid_role') {
+        $alert_type = 'warning';
+        $alert_message = 'Google login is only available for students and staff.';
+    } elseif ($error === 'suspended') {
+        $alert_type = 'danger';
+        $alert_message = 'Your account has been suspended. Please contact the administrator.';
     }
 }
 
