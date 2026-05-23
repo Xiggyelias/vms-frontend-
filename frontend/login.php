@@ -90,9 +90,11 @@ if (isset($login_successful) && $login_successful) {
                              data-ux_mode="popup"
                              data-callback="handleGoogleCredential"
                              data-auto_select="false"
-                             data-itp_support="true"
+                             data-itp_support="false"
                              data-use_fedcm_for_prompt="false">
                         </div>
+                        <!-- Clicking this button falls back to the OAuth redirect if
+                             FedCM/One-Tap is unavailable or blocked by the browser. -->
                         <div class="g_id_signin"
                              data-type="icon"
                              data-shape="circle"
@@ -101,6 +103,11 @@ if (isset($login_successful) && $login_successful) {
                              data-size="large"
                              data-logo_alignment="center">
                         </div>
+                        <button type="button" id="googleFallbackBtn"
+                                onclick="startOAuthRedirect()"
+                                style="display:none; margin-top:.5rem; padding:.6rem 1.2rem; border:1px solid #dadce0; border-radius:4px; background:#fff; cursor:pointer; font-size:.875rem; color:#3c4043;">
+                            Sign in with Google
+                        </button>
                         
                     </div>
                 </div>
@@ -134,13 +141,22 @@ if (isset($login_successful) && $login_successful) {
 
         // FedCM usage disabled; rely on Google button instead
 
-        // Traditional OAuth fallback (or let Google button handle it)
-        function fallbackLogin() {
-            // If Google Identity Services is present, let the user click the button.
-            // Optionally, you can open a popup to Google OAuth as a strict fallback.
-            // const url = 'https://accounts.google.com/o/oauth2/v2/auth?client_id=' + encodeURIComponent('<?= htmlspecialchars(GOOGLE_CLIENT_ID) ?>') + '&redirect_uri=' + encodeURIComponent(window.location.origin + '/google_oauth_callback.php') + '&response_type=token&scope=email%20profile';
-            // window.open(url, '_blank', 'width=500,height=600');
+        // Direct OAuth redirect — used when FedCM/One-Tap is blocked or unavailable.
+        function startOAuthRedirect() {
+            window.location.href = BACKEND_DIRECT_URL + '/auth/google';
         }
+
+        // Detect whether Google One-Tap managed to render. If not (FedCM disabled,
+        // CSP issue, etc.) show the plain OAuth redirect button as a fallback.
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                var gsiBtn = document.querySelector('.g_id_signin iframe, .g_id_signin button');
+                if (!gsiBtn) {
+                    var fb = document.getElementById('googleFallbackBtn');
+                    if (fb) fb.style.display = 'inline-block';
+                }
+            }, 2500);
+        });
 
 
         function handleGoogleCredential(response) {
