@@ -12,13 +12,17 @@ class SecurityMiddleware {
     private static function setSecurityHeaders() {
         // Prevent clickjacking
         header('X-Frame-Options: SAMEORIGIN');
-        
+
         // Prevent MIME type sniffing
         header('X-Content-Type-Options: nosniff');
-        
+
         // Enable XSS protection
         header('X-XSS-Protection: 1; mode=block');
-        
+
+        // Allow Google OAuth popup to postMessage back to this page while keeping
+        // the page isolated from unrelated cross-origin openers.
+        header('Cross-Origin-Opener-Policy: same-origin-allow-popups');
+
         // Content Security Policy
         $connectSources = [
             "'self'",
@@ -27,17 +31,34 @@ class SecurityMiddleware {
             'https://apis.google.com',
         ];
 
+        // Include only the backend origin (scheme + host + optional port) in connect-src.
+        $backendUrl = defined('BACKEND_URL') ? trim((string) BACKEND_URL) : '';
+        if ($backendUrl !== '') {
+            $parts = @parse_url($backendUrl);
+            if (is_array($parts) && isset($parts['scheme'], $parts['host'])) {
+                $backendOrigin = $parts['scheme'] . '://' . $parts['host'];
+                if (isset($parts['port'])) {
+                    $backendOrigin .= ':' . $parts['port'];
+                }
+                $connectSources[] = $backendOrigin;
+            }
+        }
+
         header(
             "Content-Security-Policy: default-src 'self'; " .
             "base-uri 'self'; frame-ancestors 'self'; object-src 'none'; " .
-            "script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; " .
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " .
+            // frame-src: Google Sign-In renders its button/One-Tap in a sandboxed iframe
+            "frame-src https://accounts.google.com; " .
+            // Cloudflare injects beacon.min.js from static.cloudflareinsights.com
+            "script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://static.cloudflareinsights.com; " .
+            // accounts.google.com injects its own stylesheet for the Sign-In button
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://accounts.google.com; " .
             "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " .
             "img-src 'self' data: https:; " .
             'connect-src ' . implode(' ', $connectSources) . '; ' .
             "form-action 'self';"
         );
-        
+
         header('Referrer-Policy: strict-origin-when-cross-origin');
         
         // HSTS (only in production)

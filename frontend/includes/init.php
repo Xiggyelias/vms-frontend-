@@ -62,7 +62,10 @@ define('ALLOWED_GOOGLE_DOMAIN', $_ENV['ALLOWED_GOOGLE_DOMAIN'] ?? 'africau.edu')
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $detectedBaseUrl = isset($_SERVER['HTTP_HOST']) ? ($scheme . '://' . $_SERVER['HTTP_HOST']) : 'http://localhost';
 define('BASE_URL', $_ENV['BASE_URL'] ?? $detectedBaseUrl);
-define('BACKEND_URL', $_ENV['BACKEND_URL'] ?? (BASE_URL . '/backend'));
+// BACKEND_URL must be set in production env vars (e.g. https://vmsapi.africau.co.zw).
+// Falling back to BASE_URL/backend routes requests to the frontend server itself, which
+// causes 500 errors because the frontend's legacy google_auth.php rejects those calls.
+define('BACKEND_URL', $_ENV['BACKEND_URL'] ?? 'https://vmsapi.africau.co.zw');
 define('APP_NAME', 'Vehicle Registration System');
 
 // Database connection function
