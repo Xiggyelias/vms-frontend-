@@ -105,8 +105,8 @@ if (isset($login_successful) && $login_successful) {
     </div>
 
     <script>
-        // Backend API base URL (set via BACKEND_URL env var in production)
-        const BACKEND_BASE_URL = '<?= rtrim(htmlspecialchars(BACKEND_URL, ENT_QUOTES, 'UTF-8'), '/') ?>';
+        // Use same-origin backend proxy path to avoid cross-origin CORS issues in production.
+        const BACKEND_BASE_PATH = '/backend';
 
         // Check if Google Sign-In loads properly
         window.addEventListener('load', function() {
@@ -130,7 +130,7 @@ if (isset($login_successful) && $login_successful) {
 
         function handleGoogleCredential(response) {
             // Do not log raw credentials; send minimal payload to backend for verification
-            fetch(BACKEND_BASE_URL + '/google_auth.php', {
+            fetch(BACKEND_BASE_PATH + '/google_auth.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ if (isset($login_successful) && $login_successful) {
                 if (r.status === 410 || r.status === 503) {
                     // Legacy endpoint disabled or temporarily unavailable —
                     // fall back to the standard Google OAuth redirect flow.
-                    window.location.href = BACKEND_BASE_URL + '/auth/google';
+                    window.location.href = BACKEND_BASE_PATH + '/auth/google';
                     return null;
                 }
                 return r.json();
