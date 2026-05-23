@@ -1,0 +1,140 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${FRONTEND_APP_ENV:-production}
+      BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:8080}
+      BACKEND_URL: ${FRONTEND_BACKEND_URL:-http://localhost:8080/backend}
+      SESSION_SECURE: ${FRONTEND_SESSION_SECURE:-true}
+      SESSION_SAMESITE: ${FRONTEND_SESSION_SAMESITE:-Lax}
+      ALLOW_DEV_ADMIN_LOGIN: ${FRONTEND_ALLOW_DEV_ADMIN_LOGIN:-false}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 80) ? 0 : 1);"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:80"
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${BACKEND_APP_ENV:-production}
+      APP_DEBUG: ${BACKEND_APP_DEBUG:-false}
+      APP_URL: ${BACKEND_APP_URL:-http://localhost:8080/backend}
+      APP_KEY: ${BACKEND_APP_KEY:-}
+      DB_CONNECTION: ${BACKEND_DB_CONNECTION:-mysql}
+      DB_HOST: ${BACKEND_DB_HOST:-db}
+      DB_PORT: ${BACKEND_DB_PORT:-3306}
+      DB_DATABASE: ${BACKEND_DB_DATABASE:-vehicle_registration}
+      DB_USERNAME: ${BACKEND_DB_USERNAME:-vrs_user}
+      DB_PASSWORD: ${BACKEND_DB_PASSWORD:-change_me}
+      CACHE_DRIVER: ${BACKEND_CACHE_DRIVER:-redis}
+      SESSION_DRIVER: ${BACKEND_SESSION_DRIVER:-redis}
+      SESSION_STORE: ${BACKEND_SESSION_STORE:-redis}
+      SESSION_SECURE_COOKIE: ${BACKEND_SESSION_SECURE_COOKIE:-true}
+      SESSION_HTTP_ONLY: ${BACKEND_SESSION_HTTP_ONLY:-true}
+      SESSION_SAME_SITE: ${BACKEND_SESSION_SAME_SITE:-lax}
+      QUEUE_CONNECTION: ${BACKEND_QUEUE_CONNECTION:-redis}
+      REDIS_HOST: ${BACKEND_REDIS_HOST:-redis}
+      REDIS_PORT: ${BACKEND_REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${BACKEND_REDIS_PASSWORD:-change_me_redis}
+      LOGIN_RATE_LIMIT_MAX_ATTEMPTS: ${BACKEND_LOGIN_RATE_LIMIT_MAX_ATTEMPTS:-5}
+      LOGIN_RATE_LIMIT_WINDOW_MINUTES: ${BACKEND_LOGIN_RATE_LIMIT_WINDOW_MINUTES:-15}
+      MUTATION_RATE_LIMIT_PER_MINUTE: ${BACKEND_MUTATION_RATE_LIMIT_PER_MINUTE:-120}
+      API_RATE_LIMIT_PER_MINUTE: ${BACKEND_API_RATE_LIMIT_PER_MINUTE:-120}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 80) ? 0 : 1);"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  db:
+    image: mysql:5.7
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-vehicle_registration}
+      MYSQL_USER: ${MYSQL_USER:-vrs_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - app-network
+    command:
+      - --max_connections=250
+      - --max_allowed_packet=64M
+      - --innodb_buffer_pool_size=256M
+      - --innodb_log_file_size=64M
+      - --innodb_flush_log_at_trx_commit=2
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5.2.1
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${MYSQL_USER:-vrs_user}
+      PMA_PASSWORD: ${MYSQL_PASSWORD:-change_me}
+      PMA_ARBITRARY: 1
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+    ports:
+      - "8081:80"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change_me_redis}
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-change_me_redis}"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  db_data:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge

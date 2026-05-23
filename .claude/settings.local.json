@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"C:\\\\xampp\\\\htdocs\\\\frontend\" -Recurse -Force | Where-Object { $_.Extension -in @\\('.php', '.js', '.html', '.css', '.sql', '.json', '.env', '.xml', '.conf', '.config', '.yaml', '.yml'\\) -and !$_.PSIsContainer } | Select-Object FullName | Sort-Object FullName)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\xampp\\\\htdocs\\\\frontend\\\\backend\\\\resources\\\\views\\\\emails\")",
+      "Bash(Out-Null)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\xampp\\\\htdocs\\\\frontend\\\\backend\\\\resources\\\\views\\\\auth\")",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"C:\\\\xampp\\\\htdocs\\\\frontend\\\\backend\\\\resources\\\\views\\\\emails\")",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"C:\\\\xampp\\\\htdocs\\\\frontend\\\\backend\\\\resources\\\\views\\\\auth\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\xampp\\\\htdocs\\\\frontend\\\\backend\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\xampp\\\\htdocs\\\\frontend\\\\backend\" -Recurse -File)",
+      "Bash(Sort-Object FullName)",
+      "Bash(grep -E \"\\\\.php$\")",
+      "Bash(grep \"\\\\.php$\")",
+      "Bash(git fetch *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(php artisan *)",
+      "Bash(php -r ' *)",
+      "Bash(git ls-tree *)",
+      "Bash(echo \"---exit $?---\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('REQUIRE:', list\\(d.get\\('require',{}\\).keys\\(\\)\\)\\); print\\('REQUIRE-DEV:', list\\(d.get\\('require-dev',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(python -c \"import json; d=json.load\\(open\\('composer.json'\\)\\); print\\(json.dumps\\(d.get\\('scripts', {}\\), indent=2\\)\\)\")"
+    ]
+  }
+}
