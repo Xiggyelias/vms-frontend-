@@ -105,11 +105,14 @@ if (isset($login_successful) && $login_successful) {
     </div>
 
     <script>
+        // Backend API base URL (set via BACKEND_URL env var in production)
+        const BACKEND_BASE_URL = '<?= rtrim(htmlspecialchars(BACKEND_URL, ENT_QUOTES, 'UTF-8'), '/') ?>';
+
         // Check if Google Sign-In loads properly
         window.addEventListener('load', function() {
             setTimeout(function() {
                 const googleSignIn = document.querySelector('.g_id_signin');
-                
+
                 // Silently check if Google Sign-In is present; avoid logging sensitive data
             }, 3000); // Wait 3 seconds for Google Sign-In to load
         });
@@ -127,19 +130,27 @@ if (isset($login_successful) && $login_successful) {
 
         function handleGoogleCredential(response) {
             // Do not log raw credentials; send minimal payload to backend for verification
-            fetch('/backend/google_auth.php', {
+            fetch(BACKEND_BASE_URL + '/google_auth.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
-                credentials: 'same-origin',
+                credentials: 'include',
                 body: JSON.stringify({ credential: response.credential })
             })
-            .then(r => r.json())
-            .then(data => {
-                if (data && data.success && data.requires_type_selection) {
+            .then(function(r) {
+                if (r.status === 410 || r.status === 503) {
+                    // Legacy endpoint disabled or temporarily unavailable —
+                    // fall back to the standard Google OAuth redirect flow.
+                    window.location.href = BACKEND_BASE_URL + '/auth/google';
+                    return null;
+                }
+                return r.json();
+            })
+            .then(function(data) {
+                if (!data) return;
+                if (data.success && data.requires_type_selection) {
                     // First-time login and role ambiguous: prompt for registrant type
                     const tempUserId = data.temp_user_id;
                     const suggested = (data.user_info && data.user_info.derived_type) ? data.user_info.derived_type : 'student';
@@ -148,15 +159,27 @@ if (isset($login_successful) && $login_successful) {
                     showRoleSelection(tempUserId, suggested);
                     return;
                 }
-                if (data && (data.success || data.status === 'success')) {
+                if (data.success || data.status === 'success') {
                     window.location.href = data.redirect || 'user-dashboard.php';
                 } else {
-                    alert(data.message || 'Sign-in failed. Please try again.');
+                    showLoginError(data.message || 'Sign-in failed. Please try again.');
                 }
             })
-            .catch((e) => {
-                alert('Sign-in failed. Network or server error.');
+            .catch(function() {
+                showLoginError('Sign-in failed. Please check your connection and try again.');
             });
+        }
+
+        function showLoginError(message) {
+            let el = document.getElementById('google-login-error');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'google-login-error';
+                el.style.cssText = 'margin-top:1rem;padding:.75rem 1rem;background:#fef2f2;border:1px solid #fca5a5;border-radius:.5rem;color:#b91c1c;font-size:.875rem;text-align:center;';
+                const form = document.getElementById('googleLoginForm');
+                if (form) form.insertAdjacentElement('afterend', el);
+            }
+            el.textContent = message;
         }
 
 
