@@ -140,9 +140,9 @@ if (isset($login_successful) && $login_successful) {
                 body: JSON.stringify({ credential: response.credential })
             })
             .then(function(r) {
-                if (r.status === 410 || r.status === 503) {
-                    // Legacy endpoint disabled or temporarily unavailable —
-                    // fall back to the standard Google OAuth redirect flow.
+                if (r.status === 410 || r.status === 503 || r.status === 500 || !r.ok) {
+                    // Endpoint unavailable or backend error — fall back to the
+                    // standard Google OAuth redirect flow so the user can still sign in.
                     window.location.href = BACKEND_BASE_PATH + '/auth/google';
                     return null;
                 }
@@ -353,7 +353,7 @@ if (isset($login_successful) && $login_successful) {
         function finalizeRole(userId, role, overlay, roleMsgEl, extra = {}) {
             const showRoleError = (message) => {
                 if (!roleMsgEl) {
-                    alert(message);
+                    showLoginError(message);
                     return;
                 }
                 roleMsgEl.style.display = 'block';
