@@ -31,10 +31,17 @@ class SecurityMiddleware {
             'https://apis.google.com',
         ];
 
-        // Include the backend API origin in connect-src so JS fetch() calls succeed.
-        $backendOrigin = defined('BACKEND_URL') ? rtrim(BACKEND_URL, '/') : '';
-        if ($backendOrigin !== '' && $backendOrigin !== "'self'") {
-            $connectSources[] = $backendOrigin;
+        // Include only the backend origin (scheme + host + optional port) in connect-src.
+        $backendUrl = defined('BACKEND_URL') ? trim((string) BACKEND_URL) : '';
+        if ($backendUrl !== '') {
+            $parts = @parse_url($backendUrl);
+            if (is_array($parts) && isset($parts['scheme'], $parts['host'])) {
+                $backendOrigin = $parts['scheme'] . '://' . $parts['host'];
+                if (isset($parts['port'])) {
+                    $backendOrigin .= ':' . $parts['port'];
+                }
+                $connectSources[] = $backendOrigin;
+            }
         }
 
         header(
