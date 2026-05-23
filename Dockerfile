@@ -1,7 +1,8 @@
 FROM php:8.2-apache
 
 RUN docker-php-ext-install mysqli pdo pdo_mysql opcache
-RUN a2enmod rewrite proxy proxy_http headers deflate expires
+# proxy_ssl needed when BACKEND_PROXY_URL uses https://
+RUN a2enmod rewrite proxy proxy_http proxy_ssl ssl headers deflate expires
 
 WORKDIR /var/www/html
 COPY . /var/www/html

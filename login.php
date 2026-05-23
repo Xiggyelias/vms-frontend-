@@ -105,8 +105,11 @@ if (isset($login_successful) && $login_successful) {
     </div>
 
     <script>
-        // Use same-origin backend proxy path to avoid cross-origin CORS issues in production.
+        // Same-origin proxy path for API calls (avoids cross-origin CORS issues).
         const BACKEND_BASE_PATH = '/backend';
+        // Direct backend URL for OAuth redirect fallback — the callback is registered
+        // on the backend domain so it cannot go through the same-origin proxy.
+        const BACKEND_DIRECT_URL = '<?= rtrim(htmlspecialchars(BACKEND_URL, ENT_QUOTES, 'UTF-8'), '/') ?>';
 
         // Check if Google Sign-In loads properly
         window.addEventListener('load', function() {
@@ -141,9 +144,11 @@ if (isset($login_successful) && $login_successful) {
             })
             .then(function(r) {
                 if (r.status === 410 || r.status === 503 || r.status === 500 || !r.ok) {
-                    // Endpoint unavailable or backend error — fall back to the
-                    // standard Google OAuth redirect flow so the user can still sign in.
-                    window.location.href = BACKEND_BASE_PATH + '/auth/google';
+                    // Endpoint unavailable or backend error — fall back to the standard
+                    // Google OAuth redirect flow. Use the direct backend URL because the
+                    // OAuth callback is registered on the backend domain and cannot go
+                    // through the same-origin /backend proxy.
+                    window.location.href = BACKEND_DIRECT_URL + '/auth/google';
                     return null;
                 }
                 return r.json();
