@@ -31,11 +31,43 @@ function verifyHmacToken(string $token): ?array
         return null;
     }
     [$payload, $sig] = $parts;
-    $secret = $_ENV['AUTH_SHARED_SECRET'] ?? '';
-    if ($secret === '') {
-        return null;
+    $secrets = [];
+    $explicitSecret = trim((string) ($_ENV['AUTH_SHARED_SECRET'] ?? ''));
+    if ($explicitSecret !== '') {
+        $secrets[] = $explicitSecret;
     }
-    if (!hash_equals(hash_hmac('sha256', $payload, $secret), $sig)) {
+
+    // Fallback parity with backend config/app.php so auth works even when
+    // AUTH_SHARED_SECRET was not explicitly injected into frontend runtime env.
+    $dbPasswordCandidates = array_filter(array_unique([
+        (string) ($_ENV['DB_PASSWORD'] ?? ''),
+        (string) ($_ENV['BACKEND_DB_PASSWORD'] ?? ''),
+        (string) ($_ENV['MYSQL_PASSWORD'] ?? ''),
+    ]), static fn ($v) => $v !== '');
+
+    $dbNameCandidates = array_filter(array_unique([
+        (string) ($_ENV['DB_DATABASE'] ?? ''),
+        (string) ($_ENV['DB_NAME'] ?? ''),
+        (string) ($_ENV['BACKEND_DB_DATABASE'] ?? ''),
+        (string) ($_ENV['MYSQL_DATABASE'] ?? ''),
+        'vehicleregistrationsystem',
+    ]), static fn ($v) => $v !== '');
+
+    foreach ($dbPasswordCandidates as $pwd) {
+        foreach ($dbNameCandidates as $dbName) {
+            $secrets[] = hash('sha256', $pwd . '|vms-auth|' . $dbName);
+        }
+    }
+
+    $validSignature = false;
+    foreach (array_values(array_unique($secrets)) as $secret) {
+        if (hash_equals(hash_hmac('sha256', $payload, $secret), $sig)) {
+            $validSignature = true;
+            break;
+        }
+    }
+
+    if (!$validSignature) {
         return null;
     }
     $json = base64_decode(strtr($payload, '-_', '+/'));
